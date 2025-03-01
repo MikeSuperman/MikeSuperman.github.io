@@ -2,7 +2,7 @@ object = main.c
 target = main
 
 $(target):$(object)
-	gcc $^ -o $@ -lpthread
+	gcc -g $^ -o $@ -lpthread
 
 *.o:*.c
 	gcc $< -c
