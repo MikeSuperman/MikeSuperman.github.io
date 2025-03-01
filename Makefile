@@ -10,4 +10,4 @@ $(target):$(object)
 PHONY:clean
 
 clean:
-	rm $(target) 
+	rm $(target) my.txt
