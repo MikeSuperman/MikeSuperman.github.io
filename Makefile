@@ -1,5 +1,6 @@
 object = main.c
 target = main
+files = my.txt
 
 $(target):$(object)
 	gcc -g $^ -o $@ -lpthread
@@ -10,4 +11,4 @@ $(target):$(object)
 PHONY:clean
 
 clean:
-	rm $(target) my.txt
+	rm $(target) $(files)
