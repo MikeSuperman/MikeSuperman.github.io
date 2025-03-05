@@ -9,6 +9,7 @@
 
 static void* func(void* arg)
 {
+	printf("p ID:%d,tnew ID:%ld\r\n",getpid(),pthread_self());
 	for(int i = 0;i < 10;i++)
 	{
 		printf("hello!\r\n");
@@ -23,7 +24,7 @@ int main(int argc,char *argv[])
 	{
 		printf("argv[0]:%s\r\n",argv[0]);
 	}
-	int fd,ret;
+	int fd,ret,dfd;
 	ssize_t size;
 	off_t off;
 	pthread_t tid;
@@ -43,6 +44,17 @@ int main(int argc,char *argv[])
 	{
 		perror("check");
 	}
+
+    printf("fd:%d\r\n",fd);
+
+    dfd = dup(fd);
+    if(-1 == dfd)
+    {
+        perror("duplicate error");
+    }
+
+    printf("dfd:%d\r\n",dfd);
+
 	fd = open("my.txt",O_CREAT|O_RDWR,0666);
 	if(-1 == fd)
 	{
