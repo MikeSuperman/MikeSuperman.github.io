@@ -1,6 +1,6 @@
 object = main.c
 target = main
-files = my.txt
+files = log.txt
 
 $(target):$(object)
 	gcc -g $^ -o $@ -lpthread

@@ -11,8 +11,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define UDP_SERVER_IP "192.168.0.15"
-#define UDP_SERVER_PORT 1289
+#define TCP_SERVER_IP "192.168.0.15"
+#define TCP_SERVER_PORT 1289
 
 // 获取当前时间字符串（精确到毫秒）
 void get_current_time_ms(char *time_str, size_t max_len) {
@@ -26,13 +26,31 @@ void get_current_time_ms(char *time_str, size_t max_len) {
     sprintf(time_str + strlen(time_str), ".%03ld", tv.tv_usec / 1000);
 }
 
-// 创建UDP套接字
-int create_udp_socket() {
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+// 建立TCP连接
+int create_tcp_client() {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        perror("UDP socket creation failed");
+        perror("Socket creation failed");
         return -1;
     }
+
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(TCP_SERVER_PORT);
+
+    if (inet_pton(AF_INET, TCP_SERVER_IP, &serv_addr.sin_addr) <= 0) {
+        perror("Invalid address/Address not supported");
+        close(sockfd);
+        return -1;
+    }
+
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Connection failed");
+        close(sockfd);
+        return -1;
+    }
+
     return sockfd;
 }
 
@@ -43,20 +61,9 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    // 初始化UDP套接字
-    int udp_sock = create_udp_socket();
-    if (udp_sock < 0) {
-        return -1;
-    }
-
-    // 设置目标UDP地址
-    struct sockaddr_in serv_addr;
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(UDP_SERVER_PORT);
-    if (inet_pton(AF_INET, UDP_SERVER_IP, &serv_addr.sin_addr) <= 0) {
-        perror("Invalid address/Address not supported");
-        close(udp_sock);
+    // 初始化TCP客户端
+    int tcp_sock = create_tcp_client();
+    if (tcp_sock < 0) {
         return -1;
     }
 
@@ -65,7 +72,7 @@ int main(int argc, char **argv) {
     
     if(serial_fd == -1) {
         perror("Error opening serial port");
-        close(udp_sock);
+        close(tcp_sock);
         return -1;
     }
 
@@ -76,7 +83,7 @@ int main(int argc, char **argv) {
     if(tcgetattr(serial_fd, &tty) != 0) {
         perror("Error getting terminal attributes");
         close(serial_fd);
-        close(udp_sock);
+        close(tcp_sock);
         return -1;
     }
 
@@ -96,12 +103,12 @@ int main(int argc, char **argv) {
     if(tcsetattr(serial_fd, TCSANOW, &tty) != 0) {
         perror("Error setting terminal attributes");
         close(serial_fd);
-        close(udp_sock);
+        close(tcp_sock);
         return -1;
     }
 
     printf("Listening on %s... Press Ctrl+C to exit\n", serial_port);
-    printf("UDP target: %s:%d\n", UDP_SERVER_IP, UDP_SERVER_PORT);
+    printf("TCP target: %s:%d\n", TCP_SERVER_IP, TCP_SERVER_PORT);
 
     char buffer[1024];
     char time_str[32];
@@ -119,14 +126,19 @@ int main(int argc, char **argv) {
             printf("\r\n");
             fflush(stdout);
             
-            // 通过UDP发送
-            char udp_buffer[2060];
-            snprintf(udp_buffer, sizeof(udp_buffer), "[%s] %s", time_str, buffer);
+            // 通过TCP发送
+            char tcp_buffer[2460];
+            snprintf(tcp_buffer, sizeof(tcp_buffer), "[%s] %s", time_str, buffer);
             
-            ssize_t sent = sendto(udp_sock, udp_buffer, strlen(udp_buffer), 0,
-                                 (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+            ssize_t sent = send(tcp_sock, tcp_buffer, strlen(tcp_buffer), 0);
             if (sent < 0) {
-                perror("UDP send failed");
+                perror("TCP send failed");
+                // 尝试重新连接
+                close(tcp_sock);
+                tcp_sock = create_tcp_client();
+                if (tcp_sock < 0) {
+                    break;
+                }
             }
         } else if(n < 0) {
             perror("Error reading from serial port");
@@ -135,6 +147,6 @@ int main(int argc, char **argv) {
     }
 
     close(serial_fd);
-    close(udp_sock);
+    close(tcp_sock);
     return 0;
 }
