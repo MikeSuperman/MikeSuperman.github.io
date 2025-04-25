@@ -117,7 +117,7 @@ int main() {
     printf("Waiting for connections...\n");
 
     // 设置定时打印统计信息
-//    alarm(60);  // 每分钟打印一次统计信息
+    alarm(60);  // 每分钟打印一次统计信息
 
     while (1) {
         // 接受客户端连接
@@ -150,12 +150,12 @@ int main() {
         while ((bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1)) > 0) {
             buffer[bytes_read] = '\0';
             printf("Received from %s: %s", client_ip, buffer);
-//            
-//            // 回显消息给客户端
-//            if (write(client_fd, buffer, bytes_read) < 0) {
-//                perror("write failed");
-//                break;
-//            }
+            
+            // 回显消息给客户端
+            if (write(client_fd, buffer, bytes_read) < 0) {
+                perror("write failed");
+                break;
+            }
         }
 
         if (bytes_read == 0) {
