@@ -13,6 +13,7 @@
 #define SERVER_PORT 1279
 #define MAX_CLIENTS 100
 #define MAX_THREADS 50
+#define Delay_time 5
 
 typedef struct {
     char ip[16];
@@ -33,14 +34,14 @@ pthread_mutex_t threads_mutex = PTHREAD_MUTEX_INITIALIZER;
 ClientStats* get_client_stats(const char* ip) {
     int empty_slot = -1;
     
-    pthread_mutex_lock(&stats_mutex);
+//    pthread_mutex_lock(&stats_mutex);
     
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (client_stats[i].ip[0] == '\0' && empty_slot == -1) {
             empty_slot = i;
         }
         if (strcmp(client_stats[i].ip, ip) == 0) {
-            pthread_mutex_unlock(&stats_mutex);
+//            pthread_mutex_unlock(&stats_mutex);
             return &client_stats[i];
         }
     }
@@ -49,11 +50,11 @@ ClientStats* get_client_stats(const char* ip) {
         strncpy(client_stats[empty_slot].ip, ip, sizeof(client_stats[empty_slot].ip) - 1);
         client_stats[empty_slot].ip[sizeof(client_stats[empty_slot].ip) - 1] = '\0';
         client_stats[empty_slot].count = 0;
-        pthread_mutex_unlock(&stats_mutex);
+//        pthread_mutex_unlock(&stats_mutex);
         return &client_stats[empty_slot];
     }
     
-    pthread_mutex_unlock(&stats_mutex);
+//    pthread_mutex_unlock(&stats_mutex);
     return NULL;
 }
 
@@ -94,10 +95,10 @@ void* handle_client(void* arg) {
     // 更新客户端统计信息
     ClientStats* stats = get_client_stats(client_ip);
     if (stats != NULL) {
-        pthread_mutex_lock(&stats_mutex);
+//        pthread_mutex_lock(&stats_mutex);
         stats->count++;
         int current_count = stats->count;
-        pthread_mutex_unlock(&stats_mutex);
+//        pthread_mutex_unlock(&stats_mutex);
         
 //        printf("Client connected: %s:%d (Total connections: %d)\n", client_ip, client_port, current_count);
     } else {
@@ -122,10 +123,10 @@ void* handle_client(void* arg) {
 //        printf("Received from %s:%d: %s", client_ip, client_port, buffer);
         
         // 回显消息给客户端
-        if (write(client_fd, buffer, bytes_read) < 0) {
-            perror("write failed");
-            break;
-        }
+//        if (write(client_fd, buffer, bytes_read) < 0) {
+//            perror("write failed");
+//            break;
+//        }
     }
     
     // 关闭客户端连接
@@ -143,7 +144,7 @@ void* handle_client(void* arg) {
 // 定时打印统计信息的信号处理函数
 void alarm_handler(int sig) {
     print_all_stats();
-    alarm(30); // 重新设置定时器
+    alarm(Delay_time); // 重新设置定时器
 }
 
 int main() {
@@ -155,7 +156,7 @@ int main() {
     
     // 设置信号处理
     signal(SIGALRM, alarm_handler);
-    alarm(30); // 每分钟打印一次统计信息
+    alarm(Delay_time); // 每分钟打印一次统计信息
     
     // 创建socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -231,9 +232,9 @@ int main() {
             close(client_info->client_fd);
             free(client_info);
             
-            pthread_mutex_lock(&threads_mutex);
+//            pthread_mutex_lock(&threads_mutex);
             active_threads--;
-            pthread_mutex_unlock(&threads_mutex);
+//            pthread_mutex_unlock(&threads_mutex);
         } else {
             pthread_detach(thread_id); // 分离线程，自动回收资源
         }
